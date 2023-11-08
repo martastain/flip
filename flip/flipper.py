@@ -1,29 +1,10 @@
 import serial
-import threading
 import time
-
-from pydantic import BaseModel
 
 from typing import Any
 
-
 from flip.console import Response
-
-
-class DeviceInfo(BaseModel):
-    hardware_model: str
-    hardware_name: str
-    hardware_ver: int
-    firmware_version: str
-    firmware_origin_fork: str
-    firmware_origin_git: str
-
-
-class PowerInfo(BaseModel):
-    charge_level: int
-    charge_state: str
-    battery_temp: int
-    battery_health: int
+from flip.models import DeviceInfo, PowerInfo
 
 
 class Flipper:
@@ -31,7 +12,7 @@ class Flipper:
         self.com = com
         self.connection = None
         self.connect(timeout=1)
-        self.current_directory = "/ext"
+        self.pwd = "/ext"
 
     def connect(self, timeout=10) -> None:
         try:
@@ -58,7 +39,7 @@ class Flipper:
             Response.error("Not connected")
             return ""
 
-        if command == "ls":
+        if command in ["ls", "dir"]:
             return self.ls()
         elif command.startswith("cd"):
             self.cd(command.split(" ", 1)[1])
@@ -70,15 +51,21 @@ class Flipper:
         return reply
 
     def ls(self) -> str:
-        return self.query(f"storage list {self.current_directory}")
+        return self.query(f"storage list {self.pwd}")
 
     def cd(self, directory: str) -> None:
         if directory == "..":
-            self.current_directory = "/".join(self.current_directory.split("/")[:-1])
+            directory = "/".join(self.pwd.split("/")[:-1])
         elif directory.startswith("/"):
-            self.current_directory = directory
+            directory = directory
         else:
-            self.current_directory = f"{self.current_directory}/{directory}"
+            directory = f"{self.pwd}/{directory}"
+
+        r = self.query(f"storage stat {directory}")
+        if r != "Directory":
+            Response.error(f"{directory} is not a directory")
+            return
+        self.pwd = directory
 
     def ctrl_c(self):
         self.connection.write(b"\x03")

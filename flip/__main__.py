@@ -29,7 +29,7 @@ class Flip:
         return template.format(
             hardware_name=self.flipper.device_info.hardware_name,
             firmware_version=self.flipper.device_info.firmware_version,
-            pwd=self.flipper.current_directory,
+            pwd=self.flipper.pwd,
         ).lower()
 
     def prompt(self):
