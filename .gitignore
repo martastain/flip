@@ -1,0 +1,7 @@
+firmware/
+mine/
+repos/
+
+poetry.lock
+test.py
+__pycache__

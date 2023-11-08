@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "flip"
+version = "0.1.0"
+description = ""
+authors = ["Martastain <martas@imm.cz>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+rich = "^13.6.0"
+pydantic = "^2.4.2"
+python-dotenv = "^1.0.0"
+nxtools = "^1.6"
+prompt-toolkit = "^3.0.39"
+pydantic-settings = "^2.0.3"
+pyserial = "^3.5"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
