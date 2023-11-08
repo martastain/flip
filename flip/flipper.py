@@ -13,6 +13,18 @@ class Filesystem:
         self.parent = parent
         self.pwd = "/ext"
 
+    @property
+    def commands(self):
+        return {
+            "ls": self.ls,
+            "dir": self.ls,
+            "cd": self.cd,
+            "cat": self.cat,
+        }
+
+    def ls(self) -> str:
+        return self.parent.query(f"storage list {self.pwd}")
+
     def cd(self, path: str) -> None:
         if path.startswith("/"):
             new_path = path
@@ -72,27 +84,22 @@ class Flipper:
 
         # self.vibro_alert()
 
-    def query(self, command: str) -> str:
+    def query(self, command: str) -> str | None:
         if self.connection is None:
             Response.error("Not connected")
             return ""
 
-        if command in ["ls", "dir"]:
-            return self.ls()
-        elif command.startswith("cd"):
-            self.filesystem.cd(command.split(" ", 1)[1])
-            return ""
-        elif command.startswith("cat"):
-            self.filesystem.cat(command.split(" ", 1)[1])
-            return ""
+        carg = command.split(" ", 1)
+        if carg[0] in self.filesystem.commands:
+            if len(carg) == 1:
+                return self.filesystem.commands[carg[0]]()
+            return self.filesystem.commands[carg[0]](carg[1])
 
         self.connection.write(f"{command}\r".encode())
         self.connection.readline()
         reply = self.connection.read_until(b">:").decode().rstrip(">:\r\n")
-        return reply
 
-    def ls(self) -> str:
-        return self.query(f"storage list {self.pwd}")
+        return reply or None
 
     def ctrl_c(self):
         self.connection.write(b"\x03")

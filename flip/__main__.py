@@ -27,10 +27,10 @@ class Flip:
         template = "{hardware_name}@{firmware_version}: {pwd}\n$ "
 
         return template.format(
-            hardware_name=self.flipper.device_info.hardware_name,
-            firmware_version=self.flipper.device_info.firmware_version,
+            hardware_name=self.flipper.device_info.hardware_name.lower(),
+            firmware_version=self.flipper.device_info.firmware_version.lower(),
             pwd=self.flipper.pwd,
-        ).lower()
+        )
 
     def prompt(self):
         text = self.prompt_session.prompt(
@@ -47,8 +47,9 @@ class Flip:
             case "vibr":
                 self.flipper.vibro_alert()
             case _:
-                print(self.flipper.query(text))
-                print()
+                if (res := self.flipper.query(text)) is not None:
+                    print(res)
+                    print()
 
 
 def main():
