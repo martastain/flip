@@ -1,3 +1,4 @@
+import os
 import serial
 import time
 
@@ -7,12 +8,49 @@ from flip.console import Response
 from flip.models import DeviceInfo, PowerInfo
 
 
+class Filesystem:
+    def __init__(self, parent: "Flipper"):
+        self.parent = parent
+        self.pwd = "/ext"
+
+    def cd(self, path: str) -> None:
+        if path.startswith("/"):
+            new_path = path
+        else:
+            new_path = os.path.join(
+                self.pwd,
+                path,
+            )
+        new_path = os.path.normpath(new_path)
+
+        r = self.parent.query(f"storage stat {new_path}")
+        if r.split(",")[0] not in ["Directory", "Storage"]:
+            Response.error(f"{new_path} is not a directory")
+            print(r)
+        self.pwd = new_path
+
+    def cat(self, path: str) -> str:
+        cat_path = os.path.join(self.pwd, path)
+        cat_path = os.path.normpath(cat_path)
+
+        r = self.parent.query(f"storage stat {cat_path}")
+        if r.split(",")[0] != "File":
+            Response.error(f"{cat_path} is not a file")
+            print(r)
+
+        print(self.parent.query(f"storage read {cat_path}"))
+
+
 class Flipper:
     def __init__(self, com: str) -> None:
         self.com = com
         self.connection = None
+        self.filesystem = Filesystem(self)
         self.connect(timeout=1)
-        self.pwd = "/ext"
+
+    @property
+    def pwd(self) -> str:
+        return self.filesystem.pwd
 
     def connect(self, timeout=10) -> None:
         try:
@@ -42,7 +80,10 @@ class Flipper:
         if command in ["ls", "dir"]:
             return self.ls()
         elif command.startswith("cd"):
-            self.cd(command.split(" ", 1)[1])
+            self.filesystem.cd(command.split(" ", 1)[1])
+            return ""
+        elif command.startswith("cat"):
+            self.filesystem.cat(command.split(" ", 1)[1])
             return ""
 
         self.connection.write(f"{command}\r".encode())
@@ -52,20 +93,6 @@ class Flipper:
 
     def ls(self) -> str:
         return self.query(f"storage list {self.pwd}")
-
-    def cd(self, directory: str) -> None:
-        if directory == "..":
-            directory = "/".join(self.pwd.split("/")[:-1])
-        elif directory.startswith("/"):
-            directory = directory
-        else:
-            directory = f"{self.pwd}/{directory}"
-
-        r = self.query(f"storage stat {directory}")
-        if r != "Directory":
-            Response.error(f"{directory} is not a directory")
-            return
-        self.pwd = directory
 
     def ctrl_c(self):
         self.connection.write(b"\x03")
